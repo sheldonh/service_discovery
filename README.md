@@ -12,7 +12,7 @@ be testing against a ZooKeeper instance in a Docker container.
 ```
 # Install Docker
 
-sudo apt-get install -y docker || sudo yum install -y docker
+sudo apt-get install -y docker-io || sudo yum install -y docker-io
 
 # Grant yourself permission to drive Docker without root
 
@@ -45,6 +45,6 @@ bundle exec scripts/docker_spec.sh
 To run tests against some other ZooKeeper instance, the lifecycle of which you manage yourself:
 
 ```
-ZK_HOST=localhost:2181 bundle exec rspec
+ZK_HOST=localhost:2181 bundle exec rspec -cfd spec
 ```
 
