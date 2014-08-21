@@ -13,6 +13,8 @@ be testing against a ZooKeeper instance in a Docker container.
 # Install Docker
 
 sudo apt-get install -y docker-io || sudo yum install -y docker-io
+sudo systemctl start docker
+sudo systemctl enable docker
 
 # Grant yourself permission to drive Docker without root
 
