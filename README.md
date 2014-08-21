@@ -7,7 +7,7 @@ Experimental, ZooKeeper-based service registration and location library for Ruby
 The tests require a ZooKeeper instance. These test instructions assume you'll;
 be testing against a ZooKeeper instance in a Docker container.
 
-### Setting up Docker
+### One time Docker setup
 
 ```
 # Install Docker
