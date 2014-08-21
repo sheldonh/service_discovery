@@ -27,6 +27,10 @@ newgrp docker
 newgrp ${primary_group}
 ```
 
+[The Docker Documenation](http://docs.docker.com/installation/fedora/)
+says adding yourself to the docker group isn't necessary since Docker version 1.0,
+but my first Fedora tester did have to.
+
 ### One time Ruby setup
 
 ```
