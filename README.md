@@ -34,7 +34,7 @@ but my first Fedora tester did have to.
 ### One time Ruby setup
 
 ```
-git clone git@github.com:sheldonh:service_discovery.git
+git clone git@github.com:sheldonh/service_discovery.git
 cd service_discovery
 bundle
 ```
