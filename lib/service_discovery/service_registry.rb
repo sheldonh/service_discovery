@@ -31,7 +31,10 @@ module ServiceDiscovery
     def lookup_service_uri(service_context: nil)
       KeywordSupport.require! binding
 
-      @provider.lookup(environment: @environment, service_context: service_context).sample[:uri]
+      a = @provider.lookup(environment: @environment, service_context: service_context)
+      unless a.empty?
+        a.sample[:uri]
+      end
     end
 
     def deregister_service(service_context: nil, instance: nil)

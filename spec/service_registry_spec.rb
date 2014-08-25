@@ -37,6 +37,17 @@ module ServiceDiscovery
       expect(uri).to eql 'https://crm.starjuice.net/client'
     end
 
+    it "deregisters a service uri" do
+      subject.register_service(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      subject.deregister_service(service_context: service_context, instance: 'crm1')
+    end
+
+    it "provides a service registration capable of deregistration" do
+      registration = subject.register_service(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      registration.deregister
+      expect(subject.lookup_service_uri(service_context: service_context)).to be_nil
+    end
+
   end
 
 end
