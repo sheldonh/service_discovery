@@ -27,24 +27,30 @@ module ServiceDiscovery
     end
 
     it "registers a service uri" do
-      registration = subject.register_service(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      registration = subject.register_service_uri(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
       expect(registration.uri).to eql 'https://crm.starjuice.net/client'
     end
 
     it "looks up a service uri" do
-      subject.register_service(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      subject.register_service_uri(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
       uri = subject.lookup_service_uri(service_context: service_context)
       expect(uri).to eql 'https://crm.starjuice.net/client'
     end
 
     it "deregisters a service uri" do
-      subject.register_service(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      subject.register_service_uri(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
       subject.deregister_service(service_context: service_context, instance: 'crm1')
     end
 
     it "provides a service registration capable of deregistration" do
-      registration = subject.register_service(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      registration = subject.register_service_uri(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
       registration.deregister
+      expect(subject.lookup_service_uri(service_context: service_context)).to be_nil
+    end
+
+    it "automatically deregisters a crashed service" do
+      registration = subject.register_service_uri(service_context: service_context, instance: 'crm1', uri: 'https://crm.starjuice.net/client')
+      registration.send(:provider).send(:zoo_keeper).close! # simulate socket close
       expect(subject.lookup_service_uri(service_context: service_context)).to be_nil
     end
 

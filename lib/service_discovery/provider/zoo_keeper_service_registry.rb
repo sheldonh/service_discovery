@@ -1,5 +1,7 @@
 require 'rubygems'
 require_relative '../keyword_support'
+require 'json'
+require 'zk'
 
 module ServiceDiscovery
 
@@ -16,6 +18,10 @@ module ServiceDiscovery
         def deregister
           @zoo_keeper.delete(@znode, :ignore => :no_node)
         end
+
+        private
+
+          attr_reader :zoo_keeper
       end
 
       def initialize(hosts: hosts)
@@ -43,7 +49,7 @@ module ServiceDiscovery
 
         zk = ZK.new(@hosts)
         path = instances_path(environment, service_context)
-        zk.children(path).map { |instance| JSON.parse(zk.get(path + "/" + instance)[0], symbolize_names: true) }
+        zk.children(path, :ignore => :no_node).map { |instance| JSON.parse(zk.get(path + "/" + instance)[0], symbolize_names: true) }
       end
 
       def deregister(environment: nil, service_context: nil, instance: nil)

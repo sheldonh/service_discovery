@@ -15,13 +15,17 @@ module ServiceDiscovery
       def deregister
         @provider.deregister
       end
+
+      private
+
+        attr_reader :provider
     end
 
     def initialize(environment: nil, provider: provider)
       KeywordSupport.import! binding
     end
 
-    def register_service(service_context: nil, instance: nil, uri: nil)
+    def register_service_uri(service_context: nil, instance: nil, uri: nil)
       KeywordSupport.require! binding
 
       r = @provider.register(environment: @environment, service_context: service_context, instance: instance, uri: uri)
