@@ -5,46 +5,37 @@ module ServiceDiscovery
 
   class ServiceRegistry
 
-    class ServiceRegistration
-      attr_reader :uri
-
-      def initialize(uri: nil, provider: nil)
-        KeywordSupport.import! binding
-      end
-
-      def deregister
-        @provider.deregister
-      end
-
-      private
-
-        attr_reader :provider
-    end
-
-    def initialize(environment: nil, provider: provider)
+    def initialize(provider: provider)
       KeywordSupport.import! binding
     end
 
-    def register_service_uri(service_context: nil, instance: nil, uri: nil)
+    def register_permanently(service_component: nil)
       KeywordSupport.require! binding
 
-      r = @provider.register(environment: @environment, service_context: service_context, instance: instance, uri: uri)
-      ServiceRegistration.new(uri: uri, provider: r)
+      context = service_component.context
+      @provider.register_permanently(environment: context.environment, name: context.name, version: context.version, uri: service_component.uri)
     end
 
-    def lookup_service_uri(service_context: nil)
+    def lookup(service_context: nil)
       KeywordSupport.require! binding
 
-      a = @provider.lookup(environment: @environment, service_context: service_context)
-      unless a.empty?
-        a.sample[:uri]
+      @provider.lookup(environment: service_context.environment, name: service_context.name, version: service_context.version).map do |o|
+        ServiceComponent.new(context: service_context, uri: o.uri)
       end
     end
 
-    def deregister_service(service_context: nil, instance: nil)
+    def deregister(service_component: nil)
       KeywordSupport.require! binding
 
-      @provider.deregister(environment: @environment, service_context: service_context, instance: instance)
+      context = service_component.context
+
+      @provider.deregister(environment: context.environment, name: context.name, version: context.version, uri: service_component.uri)
+    end
+
+    def deregister_all(service_context: nil)
+      KeywordSupport.require! binding
+
+      @provider.deregister_all(environment: service_context.environment, name: service_context.name, version: service_context.version)
     end
 
   end

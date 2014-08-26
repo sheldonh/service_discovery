@@ -2,6 +2,7 @@ require 'spec_helper'
 
 $VERBOSE = nil
 require 'service_discovery/service_context'
+require 'service_discovery/service_component'
 require 'service_discovery/service_registry'
 require 'service_discovery/provider/zoo_keeper_service_registry'
 require 'zk'
@@ -13,45 +14,33 @@ module ServiceDiscovery
 
     before(:each) do
       raise "ZK_HOST environment variable must point to test ZooKeeper instance:port" unless ENV['ZK_HOST']
+      subject.deregister_all(service_context: contact_details_v1)
     end
 
     after(:each) do
-      subject.deregister_service(service_context: service_context, instance: 'server1')
+      subject.deregister_all(service_context: contact_details_v1)
     end
-
-    let(:service_context) { ServiceDiscovery::ServiceContext.new(domain_perspective: 'crm', service: 'contact_details', protocol: 'http') }
 
     subject do
       provider = Provider::ZooKeeperServiceRegistry.new(hosts: ENV['ZK_HOST'])
-      ServiceRegistry.new(environment: 'test', provider: provider)
+      ServiceRegistry.new(provider: provider)
     end
 
-    it "registers a service uri" do
-      registration = subject.register_service_uri(service_context: service_context, instance: 'server1', uri: 'https://crm.starjuice.net/client')
-      expect(registration.uri).to eql 'https://crm.starjuice.net/client'
-    end
+    let(:contact_details_v1) { ServiceContext.new(environment: 'test', name: 'contact_details', version: '1') } # XXX semantic?
 
-    it "looks up a service uri" do
-      subject.register_service_uri(service_context: service_context, instance: 'server1', uri: 'https://crm.starjuice.net/client')
-      uri = subject.lookup_service_uri(service_context: service_context)
-      expect(uri).to eql 'https://crm.starjuice.net/client'
-    end
+    it "registers service end points" do
+      s1 = ServiceComponent.new(context: contact_details_v1, uri: 'https://server1.crm.starjuice.net/contacts')
+      s2 = ServiceComponent.new(context: contact_details_v1, uri: 'https://server2.crm.starjuice.net/contacts')
+      subject.register_permanently(service_component: s1)
+      subject.register_permanently(service_component: s2)
 
-    it "deregisters a service uri" do
-      subject.register_service_uri(service_context: service_context, instance: 'server1', uri: 'https://crm.starjuice.net/client')
-      subject.deregister_service(service_context: service_context, instance: 'server1')
-    end
+      expect( subject.lookup(service_context: contact_details_v1) ).to match_array [ s1, s2 ]
 
-    it "provides a service registration capable of deregistration" do
-      registration = subject.register_service_uri(service_context: service_context, instance: 'server1', uri: 'https://crm.starjuice.net/client')
-      registration.deregister
-      expect(subject.lookup_service_uri(service_context: service_context)).to be_nil
-    end
+      subject.deregister(service_component: s1)
+      expect( subject.lookup(service_context: contact_details_v1) ).to match_array [ s2 ]
 
-    it "automatically deregisters a crashed service" do
-      registration = subject.register_service_uri(service_context: service_context, instance: 'server1', uri: 'https://crm.starjuice.net/client')
-      registration.send(:provider).send(:zoo_keeper).close! # simulate socket close
-      expect(subject.lookup_service_uri(service_context: service_context)).to be_nil
+      subject.deregister(service_component: s2)
+      expect( subject.lookup(service_context: contact_details_v1) ).to match_array [ ]
     end
 
   end

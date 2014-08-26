@@ -1,5 +1,6 @@
 require 'rubygems'
 require_relative '../keyword_support'
+require 'cgi'
 require 'json'
 require 'zk'
 
@@ -9,63 +10,75 @@ module ServiceDiscovery
 
     class ZooKeeperServiceRegistry
 
-      class ZooKeeperRegistration
-        def initialize(zoo_keeper, znode)
-          @znode = znode
-          @zoo_keeper = zoo_keeper
+      class ZooKeeperServiceComponent
+        attr_reader :uri
+
+        def initialize(uri: nil)
+          KeywordSupport.import! binding
         end
-
-        def deregister
-          @zoo_keeper.delete(@znode, :ignore => :no_node)
-        end
-
-        private
-
-          attr_reader :zoo_keeper
       end
 
       def initialize(hosts: hosts)
         KeywordSupport.import! binding
       end
 
-      def register(environment: nil, service_context: nil, instance: nil, uri: nil)
+      def register_permanently(environment: nil, name: nil, version: nil, uri: nil)
         KeywordSupport.require! binding
 
-        zk = ZK.new(@hosts)
+        ZK.open(@hosts) do |zk|
+          path = instances_path(environment, name, version)
+          path.split("/").inject do |current, child|
+            (current + "/" + child).tap { |znode| zk.create(znode, :ignore => :node_exists) }
+          end
 
-        path = instances_path(environment, service_context)
-        path.split("/").inject do |current, child|
-          (current + "/" + child).tap { |znode| zk.create(znode, :ignore => :node_exists) }
+          instance_path = path + "/" + CGI.escape(uri)
+          zk.create(instance_path, {uri: uri}.to_json, mode: :persistent)
         end
-
-        instance_path = path + "/" + instance
-        zk.create(instance_path, {uri: uri}.to_json, mode: :ephemeral)
-
-        ZooKeeperRegistration.new(zk, instance_path)
       end
 
-      def lookup(environment: nil, service_context: nil)
+      def lookup(environment: nil, name: nil, version: nil)
         KeywordSupport.require! binding
 
-        zk = ZK.new(@hosts)
-        path = instances_path(environment, service_context)
-        zk.children(path, :ignore => :no_node).map { |instance| JSON.parse(zk.get(path + "/" + instance)[0], symbolize_names: true) }
+        map_children(environment, name, version) do |path, data|
+          ZooKeeperServiceComponent.new(uri: data[:uri])
+        end
       end
 
-      def deregister(environment: nil, service_context: nil, instance: nil)
+      def deregister(environment: nil, name: nil, version: nil, uri: nil)
         KeywordSupport.require! binding
 
-        zk = ZK.new(@hosts)
-        zk.delete(instances_path(environment, service_context) + "/" + instance, :ignore => :no_node)
+        ZK.open(@hosts) do |zk|
+          zk.delete(instances_path(environment, name, version) + "/" + CGI.escape(uri), :ignore => :no_node)
+        end
+      end
+
+      def deregister_all(environment: nil, name: nil, version: nil)
+        KeywordSupport.require! binding
+
+        map_children(environment, name, version) do |path, data|
+          zk.delete(path, :ignore => :no_node)
+        end
       end
 
       private
 
-        def instances_path(environment, service_context)
-          domain_perspective = service_context.domain_perspective
-          service = service_context.service
-          protocol = service_context.protocol
-          [nil, "services", environment, domain_perspective, service, protocol, "instances"].join("/")
+        def map_children(environment, name, version)
+          ZK.open(@hosts) do |zk|
+            path = instances_path(environment, name, version)
+            (zk.children(path, :ignore => :no_node) || []).map do |child|
+              begin
+                json = zk.get(path + "/" + child)[0]
+                data = JSON.parse(json, symbolize_names: true)
+                yield path + "/" + child, data
+              rescue ZK::Exceptions::NoNode
+                # Concurrent delete
+              end
+            end
+          end
+        end
+
+        def instances_path(environment, service, version)
+          [nil, "services", environment, service, version].join("/")
         end
 
     end
