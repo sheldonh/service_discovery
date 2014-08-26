@@ -28,7 +28,7 @@ module ServiceDiscovery
 
     let(:contact_details_v1) { ServiceContext.new(environment: 'test', name: 'contact_details', version: '1') } # XXX semantic?
 
-    it "registers service end points" do
+    it "registers, deregisters and looks up service components" do
       s1 = ServiceComponent.new(context: contact_details_v1, uri: 'https://server1.crm.starjuice.net/contacts')
       s2 = ServiceComponent.new(context: contact_details_v1, uri: 'https://server2.crm.starjuice.net/contacts')
       subject.register_permanently(service_component: s1)
